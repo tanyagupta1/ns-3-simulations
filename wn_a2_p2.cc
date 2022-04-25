@@ -149,7 +149,7 @@ main (int argc, char *argv[])
   uint32_t nWifi = 5;
   bool tracing = true;
   double error_rate = 0.000001;
-  int simulation_time = 2; //seconds
+  int simulation_time = 5; //seconds
 
   CommandLine cmd (__FILE__);
   // cmd.AddValue ("nCsma", "Number of \"extra\" CSMA nodes/devices", nCsma);
