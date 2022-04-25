@@ -36,11 +36,11 @@
 //                  |
 //                  n2             
 
-//n2 sends to n3
-using namespace ns3;
+//n2 and n1 send to n3
+using namespace ns3; 
 
 NS_LOG_COMPONENT_DEFINE ("ThirdScriptExample");
-class MyApp : public Application
+class MyApp : public Application  //the class which sends TCP packets to the TCP packet sink
 {
 public:
   MyApp ();
@@ -146,8 +146,8 @@ main (int argc, char *argv[])
 {
   bool verbose = true;
   // uint32_t nCsma = 4;
-  uint32_t nWifi = 5;
-  bool tracing = true;
+  uint32_t nWifi = 5; //we have 5 wifi nodes
+  bool tracing = true;//to create pcaps
   double error_rate = 0.000001;
   int simulation_time = 5; //seconds
 
@@ -174,7 +174,7 @@ main (int argc, char *argv[])
       LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
     }
 
-  NodeContainer n0n1;
+  NodeContainer n0n1; //point to point wired ethernet connecting PC1 to the router
   n0n1.Create (2);
   PointToPointHelper pointToPoint1;
   pointToPoint1.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
@@ -182,7 +182,7 @@ main (int argc, char *argv[])
   NetDeviceContainer p2pDevices1;
   p2pDevices1 = pointToPoint1.Install (n0n1);
 
-  NodeContainer n0n2;
+  NodeContainer n0n2; //point to point wired ethernet connecting PC2 to the router
   n0n2.Add(n0n1.Get(0));
   n0n2.Create (1);
   PointToPointHelper pointToPoint2;
@@ -192,7 +192,7 @@ main (int argc, char *argv[])
   p2pDevices2 = pointToPoint2.Install (n0n2);
 
 
-  NodeContainer n0n3;
+  NodeContainer n0n3;  //point to point wired ethernet connecting ISP server to the router
   n0n3.Add(n0n1.Get(0));
   n0n3.Create (1);
   PointToPointHelper pointToPoint3;
@@ -203,9 +203,9 @@ main (int argc, char *argv[])
 
 
   NodeContainer wifiStaNodes;
-  wifiStaNodes.Create (nWifi);
-  NodeContainer wifiApNode = n0n1.Get(0);
-
+  wifiStaNodes.Create (nWifi); //create 5 wifi nodes
+  NodeContainer wifiApNode = n0n1.Get(0);//the wifi access point node at the router itself
+// configuring the WiFi channnel
   YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
   YansWifiPhyHelper phy;
   phy.SetChannel (channel.Create ());
@@ -244,7 +244,7 @@ main (int argc, char *argv[])
 
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (wifiApNode);
-
+// installing the Internet stack to all the nodes to help TCP work
   InternetStackHelper stack;
   stack.Install (wifiApNode);
   stack.Install (wifiStaNodes);
@@ -252,7 +252,7 @@ main (int argc, char *argv[])
   stack.Install(n0n2.Get(1));
   stack.Install(n0n3.Get(1));
 
-  Ipv4AddressHelper address;
+  Ipv4AddressHelper address; //assigning IP addresses to the 8 nodes
 
   address.SetBase ("10.1.1.0", "255.255.255.0");
   Ipv4InterfaceContainer p2pInterfaces1;
@@ -272,12 +272,12 @@ main (int argc, char *argv[])
   staInterface = address.Assign (staDevices);
   address.Assign (apDevices);
 
-  Ptr<RateErrorModel> em = CreateObject<RateErrorModel> ();
+  Ptr<RateErrorModel> em = CreateObject<RateErrorModel> ();//error model at the router
   em->SetAttribute ("ErrorRate", DoubleValue (error_rate));
   p2pDevices1.Get(0)->SetAttribute ("ReceiveErrorModel", PointerValue (em));
 
 //sink for n2
-  uint16_t sinkPort1 = 8080;
+  uint16_t sinkPort1 = 8080;//the first sink port at ISP node is at port 8080
   Address sinkAddress1 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort1));
   PacketSinkHelper packetSinkHelper1 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort1));
   ApplicationContainer sinkApps1 = packetSinkHelper1.Install (n0n3.Get(1));
@@ -307,18 +307,18 @@ main (int argc, char *argv[])
   n0n1.Get (1)->AddApplication (app2);
   app2->SetStartTime (Seconds (1.));
   app2->SetStopTime (Seconds (simulation_time));
-
+//populate routing tables
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   Simulator::Stop (Seconds (simulation_time));
-
+// create pcap files
   if (tracing)
     {
       phy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
       pointToPoint1.EnablePcapAll ("p2p");
       phy.EnablePcapAll ("Wifi");
     }
-
+// running the final simulator
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
