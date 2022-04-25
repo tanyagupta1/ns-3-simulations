@@ -316,6 +316,22 @@ main (int argc, char *argv[])
   sinkApps5.Start (Seconds (0.));
   sinkApps5.Stop (Seconds (simulation_time));
 
+  //sink for n7
+  uint16_t sinkPort6 = 8085;
+  Address sinkAddress6 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort6));
+  PacketSinkHelper packetSinkHelper6 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort6));
+  ApplicationContainer sinkApps6 = packetSinkHelper6.Install (n0n3.Get(1));
+  sinkApps6.Start (Seconds (0.));
+  sinkApps6.Stop (Seconds (simulation_time));
+
+  //sink for n8
+  uint16_t sinkPort7 = 8086;
+  Address sinkAddress7 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort7));
+  PacketSinkHelper packetSinkHelper7 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort7));
+  ApplicationContainer sinkApps7 = packetSinkHelper7.Install (n0n3.Get(1));
+  sinkApps7.Start (Seconds (0.));
+  sinkApps7.Stop (Seconds (simulation_time));
+
 // app at n2
   Ptr<Socket> ns3TcpSocket1 = Socket::CreateSocket (n0n2.Get (1), TcpSocketFactory::GetTypeId ());
   Ptr<MyApp> app1 = CreateObject<MyApp> ();
@@ -355,6 +371,22 @@ main (int argc, char *argv[])
   wifiStaNodes.Get(2)->AddApplication (app5);
   app5->SetStartTime (Seconds (1.));
   app5->SetStopTime (Seconds (simulation_time));
+
+  //app at n7
+  Ptr<Socket> ns3TcpSocket6 = Socket::CreateSocket (wifiStaNodes.Get(3), TcpSocketFactory::GetTypeId ());
+  Ptr<MyApp> app6 = CreateObject<MyApp> ();
+  app6->Setup (ns3TcpSocket6, sinkAddress6, 1460, 1000000, DataRate ("100Mbps"));
+  wifiStaNodes.Get(3)->AddApplication (app6);
+  app6->SetStartTime (Seconds (1.));
+  app6->SetStopTime (Seconds (simulation_time));
+
+  //app at n8
+  Ptr<Socket> ns3TcpSocket7 = Socket::CreateSocket (wifiStaNodes.Get(4), TcpSocketFactory::GetTypeId ());
+  Ptr<MyApp> app7 = CreateObject<MyApp> ();
+  app7->Setup (ns3TcpSocket7, sinkAddress7, 1460, 1000000, DataRate ("100Mbps"));
+  wifiStaNodes.Get(4)->AddApplication (app7);
+  app7->SetStartTime (Seconds (1.));
+  app7->SetStopTime (Seconds (simulation_time));
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 

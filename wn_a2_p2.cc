@@ -24,18 +24,19 @@
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/ssid.h"
 
-// Default Network Topology
+// Network Topology
 //
-//   Wifi 10.1.3.0
-//                  AP
-//  *  *  *  *  *
-//  |  |  |  |  |        10.1.1.0
-// n3 n4 n5 n6 n7   n0 -------------- n1
-//                  | point-to-point  
-//                  |
+//   Wifi 10.1.3.0  n3(ISP)
+//                  | 
+//  *  *  *  *  *   | (10.1.4.0)
+//  |  |  |  |  |   |                (10.1.1.0)
+// n3 n4 n5 n6 n7   n0(Router/Ap) -------------- n1
+//   (10.1.3.0)     | 
+//                  | (10.1.2.0)
 //                  |
 //                  n2             
-//n1-n0-n2 (n0 is router and Ap)
+
+//n2 sends to n3
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("ThirdScriptExample");
@@ -139,12 +140,6 @@ MyApp::ScheduleTx (void)
     }
 }
 
-// static void
-// CwndChange (Ptr<OutputStreamWrapper> stream, uint32_t oldCwnd, uint32_t newCwnd)
-// {
-//   //NS_LOG_UNCOND (Simulator::Now ().GetSeconds () << "\t" << newCwnd);
-//   *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldCwnd << "\t" << newCwnd << std::endl;
-// }
 
 int 
 main (int argc, char *argv[])
@@ -153,8 +148,8 @@ main (int argc, char *argv[])
   // uint32_t nCsma = 4;
   uint32_t nWifi = 5;
   bool tracing = true;
-  // double error_rate = 0.000000;
-  int simulation_time = 5; //secon
+  double error_rate = 0.000001;
+  int simulation_time = 2; //seconds
 
   CommandLine cmd (__FILE__);
   // cmd.AddValue ("nCsma", "Number of \"extra\" CSMA nodes/devices", nCsma);
@@ -188,7 +183,7 @@ main (int argc, char *argv[])
   p2pDevices1 = pointToPoint1.Install (n0n1);
 
   NodeContainer n0n2;
-  n0n2.Add(n0n1.Get(1));
+  n0n2.Add(n0n1.Get(0));
   n0n2.Create (1);
   PointToPointHelper pointToPoint2;
   pointToPoint2.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
@@ -197,9 +192,16 @@ main (int argc, char *argv[])
   p2pDevices2 = pointToPoint2.Install (n0n2);
 
 
-  // Ptr<RateErrorModel> em = CreateObject<RateErrorModel> ();
-  // em->SetAttribute ("ErrorRate", DoubleValue (error_rate));
-  // devices.Get (1)->SetAttribute ("ReceiveErrorModel", PointerValue (em));
+  NodeContainer n0n3;
+  n0n3.Add(n0n1.Get(0));
+  n0n3.Create (1);
+  PointToPointHelper pointToPoint3;
+  pointToPoint3.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  pointToPoint3.SetChannelAttribute ("Delay", StringValue ("2ms"));
+  NetDeviceContainer p2pDevices3;
+  p2pDevices3 = pointToPoint3.Install (n0n3);
+
+
   NodeContainer wifiStaNodes;
   wifiStaNodes.Create (nWifi);
   NodeContainer wifiApNode = n0n1.Get(0);
@@ -244,11 +246,11 @@ main (int argc, char *argv[])
   mobility.Install (wifiApNode);
 
   InternetStackHelper stack;
-  // stack.Install (csmaNodes);
   stack.Install (wifiApNode);
   stack.Install (wifiStaNodes);
   stack.Install(n0n1.Get(1));
   stack.Install(n0n2.Get(1));
+  stack.Install(n0n3.Get(1));
 
   Ipv4AddressHelper address;
 
@@ -260,57 +262,37 @@ main (int argc, char *argv[])
   Ipv4InterfaceContainer p2pInterfaces2;
   p2pInterfaces2 = address.Assign (p2pDevices2);
 
-  // address.SetBase ("10.1.2.0", "255.255.255.0");
-  // Ipv4InterfaceContainer csmaInterfaces;
-  // csmaInterfaces = address.Assign (csmaDevices);
+  address.SetBase ("10.1.4.0", "255.255.255.0");
+  Ipv4InterfaceContainer p2pInterfaces3;
+  p2pInterfaces3 = address.Assign (p2pDevices3);
+
 
   address.SetBase ("10.1.3.0", "255.255.255.0");
   Ipv4InterfaceContainer staInterface;
   staInterface = address.Assign (staDevices);
   address.Assign (apDevices);
 
+  Ptr<RateErrorModel> em = CreateObject<RateErrorModel> ();
+  em->SetAttribute ("ErrorRate", DoubleValue (error_rate));
+  p2pDevices1.Get(0)->SetAttribute ("ReceiveErrorModel", PointerValue (em));
 
-  // ApplicationContainer serverApps = echoServer.Install (csmaNodes.Get (nCsma));
-
-
-  //echo server becomes tcp app
-
-  // UdpEchoServerHelper echoServer (9);
-  // ApplicationContainer serverApps = echoServer.Install (n0n2.Get(1));
-  // serverApps.Start (Seconds (1.0));
-  // serverApps.Stop (Seconds (10.0));
-
-
-
-  // UdpEchoClientHelper echoClient (csmaInterfaces.GetAddress (nCsma), 9);
- 
-
-
-  //client became packet sink
-
-  //  UdpEchoClientHelper echoClient (p2pInterfaces2.GetAddress(1), 9);
-  // echoClient.SetAttribute ("MaxPackets", UintegerValue (1));
-  // echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
-  // echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
-
-  // ApplicationContainer clientApps = echoClient.Install (wifiStaNodes.Get (0));
-  // clientApps.Start (Seconds (2.0));
-  // clientApps.Stop (Seconds (10.0));
-
+//sink for n2
   uint16_t sinkPort1 = 8080;
-  Address sinkAddress1 (InetSocketAddress (staInterface.GetAddress (0), sinkPort1));
+  Address sinkAddress1 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort1));
   PacketSinkHelper packetSinkHelper1 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort1));
-  ApplicationContainer sinkApps1 = packetSinkHelper1.Install (wifiStaNodes.Get (0));
+  ApplicationContainer sinkApps1 = packetSinkHelper1.Install (n0n3.Get(1));
   sinkApps1.Start (Seconds (0.));
   sinkApps1.Stop (Seconds (simulation_time));
 
+//sink for n1
   uint16_t sinkPort2 = 8081;
-  Address sinkAddress2 (InetSocketAddress (staInterface.GetAddress (0), sinkPort2));
+  Address sinkAddress2 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort2));
   PacketSinkHelper packetSinkHelper2 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort2));
-  ApplicationContainer sinkApps2 = packetSinkHelper2.Install (wifiStaNodes.Get (0));
+  ApplicationContainer sinkApps2 = packetSinkHelper2.Install (n0n3.Get(1));
   sinkApps2.Start (Seconds (0.));
   sinkApps2.Stop (Seconds (simulation_time));
 
+// app at n2
   Ptr<Socket> ns3TcpSocket1 = Socket::CreateSocket (n0n2.Get (1), TcpSocketFactory::GetTypeId ());
   Ptr<MyApp> app1 = CreateObject<MyApp> ();
   app1->Setup (ns3TcpSocket1, sinkAddress1, 1460, 1000000, DataRate ("100Mbps"));
@@ -318,13 +300,13 @@ main (int argc, char *argv[])
   app1->SetStartTime (Seconds (1.));
   app1->SetStopTime (Seconds (simulation_time));
 
+  //app at n1
   Ptr<Socket> ns3TcpSocket2 = Socket::CreateSocket (n0n1.Get (1), TcpSocketFactory::GetTypeId ());
   Ptr<MyApp> app2 = CreateObject<MyApp> ();
   app2->Setup (ns3TcpSocket2, sinkAddress2, 1460, 1000000, DataRate ("100Mbps"));
-  n0n1.Get(1)->AddApplication(app2);
+  n0n1.Get (1)->AddApplication (app2);
   app2->SetStartTime (Seconds (1.));
   app2->SetStopTime (Seconds (simulation_time));
-  
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
@@ -333,11 +315,8 @@ main (int argc, char *argv[])
   if (tracing)
     {
       phy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
-      pointToPoint1.EnablePcapAll ("third");
-      pointToPoint2.EnablePcapAll ("third");
-      phy.EnablePcap ("third", apDevices.Get (0));
-      phy.EnablePcap ("third", staDevices.Get(0));
-      // csma.EnablePcap ("third", csmaDevices.Get (0), true);
+      pointToPoint1.EnablePcapAll ("p2p");
+      phy.EnablePcapAll ("Wifi");
     }
 
   Simulator::Run ();

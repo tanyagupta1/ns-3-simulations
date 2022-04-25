@@ -30,14 +30,13 @@
 //                  | 
 //  *  *  *  *  *   | (10.1.4.0)
 //  |  |  |  |  |   |                (10.1.1.0)
-// n4 n5 n6 n7 n8   n0(Router/Ap) -------------- n1
+// n3 n4 n5 n6 n7   n0(Router/Ap) -------------- n1
 //   (10.1.3.0)     | 
 //                  | (10.1.2.0)
 //                  |
 //                  n2             
 
-//n1 and n2 send to n3
-//n4 n5 n6 send to n3
+//n2 sends to n3
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("ThirdScriptExample");
@@ -277,7 +276,7 @@ main (int argc, char *argv[])
   em->SetAttribute ("ErrorRate", DoubleValue (error_rate));
   p2pDevices1.Get(0)->SetAttribute ("ReceiveErrorModel", PointerValue (em));
 
-//sink for n2
+
   uint16_t sinkPort1 = 8080;
   Address sinkAddress1 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort1));
   PacketSinkHelper packetSinkHelper1 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort1));
@@ -285,38 +284,6 @@ main (int argc, char *argv[])
   sinkApps1.Start (Seconds (0.));
   sinkApps1.Stop (Seconds (simulation_time));
 
-//sink for n1
-  uint16_t sinkPort2 = 8081;
-  Address sinkAddress2 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort2));
-  PacketSinkHelper packetSinkHelper2 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort2));
-  ApplicationContainer sinkApps2 = packetSinkHelper2.Install (n0n3.Get(1));
-  sinkApps2.Start (Seconds (0.));
-  sinkApps2.Stop (Seconds (simulation_time));
-
-  //sink for n4
-  uint16_t sinkPort3 = 8082;
-  Address sinkAddress3 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort3));
-  PacketSinkHelper packetSinkHelper3 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort3));
-  ApplicationContainer sinkApps3 = packetSinkHelper3.Install (n0n3.Get(1));
-  sinkApps3.Start (Seconds (0.));
-  sinkApps3.Stop (Seconds (simulation_time));
-
-  //sink for n5
-  uint16_t sinkPort4 = 8083;
-  Address sinkAddress4 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort4));
-  PacketSinkHelper packetSinkHelper4 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort4));
-  ApplicationContainer sinkApps4 = packetSinkHelper4.Install (n0n3.Get(1));
-  sinkApps4.Start (Seconds (0.));
-  sinkApps4.Stop (Seconds (simulation_time));
-  //sink for n6
-  uint16_t sinkPort5 = 8084;
-  Address sinkAddress5 (InetSocketAddress (p2pInterfaces3.GetAddress (1), sinkPort5));
-  PacketSinkHelper packetSinkHelper5 ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort5));
-  ApplicationContainer sinkApps5 = packetSinkHelper5.Install (n0n3.Get(1));
-  sinkApps5.Start (Seconds (0.));
-  sinkApps5.Stop (Seconds (simulation_time));
-
-// app at n2
   Ptr<Socket> ns3TcpSocket1 = Socket::CreateSocket (n0n2.Get (1), TcpSocketFactory::GetTypeId ());
   Ptr<MyApp> app1 = CreateObject<MyApp> ();
   app1->Setup (ns3TcpSocket1, sinkAddress1, 1460, 1000000, DataRate ("100Mbps"));
@@ -324,37 +291,7 @@ main (int argc, char *argv[])
   app1->SetStartTime (Seconds (1.));
   app1->SetStopTime (Seconds (simulation_time));
 
-  //app at n1
-  Ptr<Socket> ns3TcpSocket2 = Socket::CreateSocket (n0n1.Get (1), TcpSocketFactory::GetTypeId ());
-  Ptr<MyApp> app2 = CreateObject<MyApp> ();
-  app2->Setup (ns3TcpSocket2, sinkAddress2, 1460, 1000000, DataRate ("100Mbps"));
-  n0n1.Get (1)->AddApplication (app2);
-  app2->SetStartTime (Seconds (1.));
-  app2->SetStopTime (Seconds (simulation_time));
-
-  //app at n4
-  Ptr<Socket> ns3TcpSocket3 = Socket::CreateSocket (wifiStaNodes.Get(0), TcpSocketFactory::GetTypeId ());
-  Ptr<MyApp> app3 = CreateObject<MyApp> ();
-  app3->Setup (ns3TcpSocket3, sinkAddress3, 1460, 1000000, DataRate ("100Mbps"));
-  wifiStaNodes.Get(0)->AddApplication (app3);
-  app3->SetStartTime (Seconds (1.));
-  app3->SetStopTime (Seconds (simulation_time));
-
-  //app at n5
-  Ptr<Socket> ns3TcpSocket4 = Socket::CreateSocket (wifiStaNodes.Get(1), TcpSocketFactory::GetTypeId ());
-  Ptr<MyApp> app4 = CreateObject<MyApp> ();
-  app4->Setup (ns3TcpSocket4, sinkAddress4, 1460, 1000000, DataRate ("100Mbps"));
-  wifiStaNodes.Get(1)->AddApplication (app4);
-  app4->SetStartTime (Seconds (1.));
-  app4->SetStopTime (Seconds (simulation_time));
-
-  //app at n6
-  Ptr<Socket> ns3TcpSocket5 = Socket::CreateSocket (wifiStaNodes.Get(2), TcpSocketFactory::GetTypeId ());
-  Ptr<MyApp> app5 = CreateObject<MyApp> ();
-  app5->Setup (ns3TcpSocket5, sinkAddress5, 1460, 1000000, DataRate ("100Mbps"));
-  wifiStaNodes.Get(2)->AddApplication (app5);
-  app5->SetStartTime (Seconds (1.));
-  app5->SetStopTime (Seconds (simulation_time));
+  
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
